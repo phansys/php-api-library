@@ -1,12 +1,26 @@
 {
     "name": "kayako/php-api-library",
+    "type": "library",
     "description": "PHP API library for Kayako",
+    "homepage": "https://www.kayako.com",
+    "license": "proprietary",
     "require": {
         "php": ">=5.3.0",
         "ext-curl": "*"
     },
+    "require-dev": {
+        "phpdocumentor/phpdocumentor": "~2.8"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
     "autoload": {
         "classmap": [""],
         "files": ["kyHelpers.php"]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
     }
 }
