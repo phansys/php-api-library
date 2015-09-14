@@ -107,97 +107,98 @@ class kyRESTClient implements kyRESTClientInterface {
 		return $url;
 	}
 
-	/**
-	 * Sends the request to Kayako server and returns parsed response.
-	 *
-	 * @param string $controller Kayako controller to call. Null to use default controller defined for object.
-	 * @param string $method HTTP verb.
-	 * @param array $parameters Optional. List of additional parameters (like object identifiers or search parameters).
-	 * @param array $data Optional. Data array with parameter name as key and parameter value as value.
-	 * @param array $files Optional. Array of files in form of: array('<parameter name>' => array('file_name' => '<file name>', 'contents' => '<file contents>'), ...).
-	 * @throws kyException
-	 * @return array
-	 */
-	protected function processRequest($controller, $method, $parameters = array(), $data = array(), $files = array()) {
-		$url = $this->getRequestData($controller, $method, $parameters, $data);
+    /**
+     * Sends the request to Kayako server and returns parsed response.
+     *
+     * @param string $controller Kayako controller to call. Null to use default controller defined for object.
+     * @param string $method HTTP verb.
+     * @param array $parameters Optional. List of additional parameters (like object identifiers or search parameters).
+     * @param array $data Optional. Data array with parameter name as key and parameter value as value.
+     * @param array $files Optional. Array of files in form of: array('<parameter name>' => array('file_name' => '<file name>', 'contents' => '<file contents>'), ...).
+     * @throws kyException
+     * @return array
+     */
+    protected function processRequest($controller, $method, $parameters = array(), $data = array(), $files = array()) {
+        $url = $this->getRequestData($controller, $method, $parameters, $data);
 
-		$headers = array();
-		$request_body = $this->buildPostBody($data, $files, $headers);
+        $headers = array();
+        $request_body = $this->buildPostBody($data, $files, $headers);
 
-		$curl_options = array(
-			CURLOPT_HEADER => false,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_SSL_VERIFYPEER => false,
-			CURLOPT_SSL_VERIFYHOST => false,
-			CURLOPT_CONNECTTIMEOUT => 2,
-			CURLOPT_FORBID_REUSE => true,
-			CURLOPT_FRESH_CONNECT => true,
-			CURLOPT_URL => $url
-		);
+        $curl_options = array(
+            CURLOPT_HEADER => false,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_FORBID_REUSE => true,
+            CURLOPT_FRESH_CONNECT => true,
+            CURLOPT_URL => $url
+        );
 
-		switch ($method) {
-			case self::METHOD_GET:
-				break;
-			case self::METHOD_POST:
-				$curl_options[CURLOPT_POSTFIELDS] = $request_body;
-				$curl_options[CURLOPT_POST] = true;
-				break;
-			case self::METHOD_PUT:
-				$curl_options[CURLOPT_CUSTOMREQUEST] = 'PUT';
-				$curl_options[CURLOPT_POSTFIELDS] = $request_body;
-				break;
-			case self::METHOD_DELETE:
-				$curl_options[CURLOPT_CUSTOMREQUEST] = 'DELETE';
-				break;
-		}
+        switch ($method) {
+            case self::METHOD_GET:
+                break;
+            case self::METHOD_POST:
+                $curl_options[CURLOPT_POSTFIELDS] = $request_body;
+                $curl_options[CURLOPT_POST] = true;
+                break;
+            case self::METHOD_PUT:
+                $curl_options[CURLOPT_CUSTOMREQUEST] = 'PUT';
+                $curl_options[CURLOPT_POSTFIELDS] = $request_body;
+                break;
+            case self::METHOD_DELETE:
+                $curl_options[CURLOPT_CUSTOMREQUEST] = 'DELETE';
+                break;
+        }
 
-		$curl_options[CURLOPT_HTTPHEADER] = $headers;
+        $curl_options[CURLOPT_HTTPHEADER] = $headers;
+        $logMsg = '';
 
-		if ($this->config->isDebugEnabled()) {
-			error_log('Sending REST request to Kayako:');
-			error_log(sprintf('  %s: %s', $method, $curl_options[CURLOPT_URL]));
-			if ($method === self::METHOD_POST || $method === self::METHOD_PUT) {
-				error_log(sprintf('  Body: %s', $request_body));
-			}
-		}
+        if ($this->config->isDebugEnabled()) {
+            $logMsg .= sprintf("Sending REST request to Kayako\n:  %s: %s", $method, $curl_options[CURLOPT_URL]);
 
-		$curl_handle = curl_init();
-		curl_setopt_array($curl_handle, $curl_options);
+            if ($method === self::METHOD_POST || $method === self::METHOD_PUT) {
+                $logMsg .= sprintf("\n  Body: %s\n\n", $request_body);
+            }
+        }
 
-		$response = curl_exec($curl_handle);
+        $curl_handle = curl_init();
+        curl_setopt_array($curl_handle, $curl_options);
 
-		if ($this->config->isDebugEnabled()) {
-			error_log('Response from Kayako server:');
-			error_log($response);
-		}
+        $response = curl_exec($curl_handle);
 
-		//removing any output prior to proper XML response (ex. Kayako notices)
-		$xml_start_pos = stripos($response, "<?xml");
-		if ($xml_start_pos > 0) {
-			$response = substr($response, $xml_start_pos);
-		}
+        if ($this->config->isDebugEnabled()) {
+            $logMsg .= sprintf("Response from Kayako server:\n%s", $response);
+            $this->config->getLogger()->debug($logMsg);
+        }
 
-		if ($response === false)
-			throw new kyException(sprintf('CURL error: %s (%s)', curl_error($curl_handle), curl_errno($curl_handle)));
+        //removing any output prior to proper XML response (ex. Kayako notices)
+        $xml_start_pos = stripos($response, "<?xml");
+        if ($xml_start_pos > 0) {
+            $response = substr($response, $xml_start_pos);
+        }
 
-		$http_status = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
-		if ($http_status != 200)
-			throw new kyException(sprintf("HTTP error: %s", $http_status));
+        if ($response === false)
+            throw new kyException(sprintf('CURL error: %s (%s)', curl_error($curl_handle), curl_errno($curl_handle)));
 
-		curl_close($curl_handle);
+        $http_status = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
+        if ($http_status != 200)
+            throw new kyException(sprintf("HTTP error: %s", $http_status));
 
-		if ($method === self::METHOD_DELETE)
-			return null;
+        curl_close($curl_handle);
 
-		$result = ky_xml_to_array($response);
-		if ($result === false)
-			throw new kyException("Error parsing XML response.");
+        if ($method === self::METHOD_DELETE)
+            return null;
 
-		if (count($result) === 1 && array_key_exists('_contents', $result) && strlen($result['_contents']) === 0)
-			$result = array();
+        $result = ky_xml_to_array($response);
+        if ($result === false)
+            throw new kyException("Error parsing XML response.");
 
-		return $result;
-	}
+        if (count($result) === 1 && array_key_exists('_contents', $result) && strlen($result['_contents']) === 0)
+            $result = array();
+
+        return $result;
+    }
 
 	/**
 	 * Sends GET request to the server and returns parsed data.

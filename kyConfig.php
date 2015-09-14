@@ -1,4 +1,7 @@
 <?php
+
+use Psr\Log\LoggerInterface;
+
 /**
  * Class holding library configuration.
  *
@@ -63,6 +66,11 @@ class kyConfig {
 	 */
 	static private $current_config = null;
 
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
 	/**
 	 * Initializes client configuration object.
 	 *
@@ -97,7 +105,7 @@ class kyConfig {
 	 * @param kyConfig $config Configuration.
 	 * @return kyConfig
 	 */
-	static public function set(kyConfig $config) {
+	static public function set(self $config) {
 		self::$current_config = $config;
 		return self::$current_config;
 	}
@@ -274,18 +282,18 @@ class kyConfig {
 	}
 
 	/**
-	 * Returns whether debug mode is enabled.
-	 * When enabled, REST requests and responses are logged using error_log.
+	 * Returns whether debug mode is enabled and a logger is set.
+	 * When enabled, REST requests and responses are logged using LoggerInterface.
 	 *
 	 * @return bool
 	 */
 	public function isDebugEnabled() {
-		return $this->is_debug_enabled;
+		return $this->is_debug_enabled && null !== $this->logger;
 	}
 
 	/**
 	 * Enables or disables debug mode.
-	 * When enabled, REST requests and responses are logged using error_log.
+	 * When enabled, REST requests and responses are logged using LoggerInterface.
 	 *
 	 * @param bool $is_debug_enabled
 	 * @return kyConfig
@@ -294,4 +302,24 @@ class kyConfig {
 		$this->is_debug_enabled = $is_debug_enabled;
 		return $this;
 	}
+
+    /**
+     * Returns the logger instance.
+     *
+     * @return LoggerInterface
+     */
+    public function getLogger() {
+        return $this->logger;
+    }
+
+    /**
+     * Sets the logger for dumping debug messages.
+     *
+     * @return kyConfig
+     */
+    public function setLogger(LoggerInterface $logger) {
+        $this->logger = $logger;
+
+        return $this;
+    }
 }

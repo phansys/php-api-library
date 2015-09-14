@@ -24,15 +24,20 @@ define('SECRET_KEY', '<Secret key>');
 define('DEBUG', true);
 define('USER_GROUP_TITLE', 'Registered');
 
-require_once("../kyIncludes.php");
+require_once __DIR__.'/bootstrap.php';
 
 /**
  * Initializes the client.
  */
 function initKayako() {
-	$config = new kyConfig(BASE_URL, API_KEY, SECRET_KEY);
-	$config->setDebugEnabled(DEBUG);
-	kyConfig::set($config);
+    $config = new kyConfig(BASE_URL, API_KEY, SECRET_KEY);
+    if (DEBUG && class_exists('\Monolog\Logger')) {
+        $logger = new \Monolog\Logger('kayako_ticket_form');
+        $logger->pushHandler(new \Monolog\Handler\StreamHandler(__DIR__.'/kayako_ticket_form.log', \Monolog\Logger::DEBUG));
+        $config->setLogger($logger);
+    }
+    $config->setDebugEnabled(DEBUG);
+    kyConfig::set($config);
 }
 
 /**

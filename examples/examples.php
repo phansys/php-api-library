@@ -1,11 +1,17 @@
 <?php
-require_once("../kyIncludes.php");
+require_once __DIR__.'/bootstrap.php';
 
 print "<pre>";
 /**
  * Initialization.
  */
 kyConfig::set(new kyConfig("<API URL>", "<API key>", "<Secret key>"));
+
+if (class_exists('\Monolog\Logger')) {
+    $logger = new \Monolog\Logger('kayako_examples');
+    $logger->pushHandler(new \Monolog\Handler\StreamHandler(__DIR__.'/kayako_examples.log', \Monolog\Logger::DEBUG));
+    kyConfig::get()->setLogger($logger);
+}
 kyConfig::get()->setDebugEnabled(true);
 
 /**
